@@ -1,0 +1,1 @@
+io.mcmaster.create_more_fans.kubejs.CreateMoreFansPlugin createmorefans
