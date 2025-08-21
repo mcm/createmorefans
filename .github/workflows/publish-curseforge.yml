@@ -31,7 +31,7 @@ jobs:
       - name: Upload JAR as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: monkeypatches-jar
+          name: createmorefans-jar
           path: build/libs/*.jar
           retention-days: 30
 
@@ -121,16 +121,16 @@ jobs:
             echo EOF
           } >> $GITHUB_OUTPUT
 
-      # - name: Upload to CurseForge
-      #   uses: itsmeow/curseforge-upload@v3
-      #   with:
-      #     token: ${{ secrets.CF_API_TOKEN }}
-      #     project_id: ${{ vars.CF_PROJECT_ID }}
-      #     game_endpoint: minecraft
-      #     file_path: build/libs/monkeypatches-${{ steps.get_version.outputs.version }}.jar
-      #     display_name: monkeypatches-${{ steps.get_version.outputs.version }}.jar
-      #     game_versions: "Minecraft 1.21:${{ steps.gradle_props.outputs.minecraft_version }},NeoForge,Java 21"
-      #     release_type: release
-      #     changelog_type: markdown
-      #     changelog: ${{ steps.changelog.outputs.changelog }}
-      #     relations: ""
+      - name: Upload to CurseForge
+        uses: itsmeow/curseforge-upload@v3
+        with:
+          token: ${{ secrets.CF_API_TOKEN }}
+          project_id: ${{ vars.CF_PROJECT_ID }}
+          game_endpoint: minecraft
+          file_path: build/libs/createmorefans-${{ steps.get_version.outputs.version }}.jar
+          display_name: createmorefans-${{ steps.get_version.outputs.version }}.jar
+          game_versions: "Minecraft 1.21:${{ steps.gradle_props.outputs.minecraft_version }},NeoForge,Java 21"
+          release_type: release
+          changelog_type: markdown
+          changelog: ${{ steps.changelog.outputs.changelog }}
+          relations: ""
