@@ -11,8 +11,6 @@ import com.simibubi.create.content.processing.recipe.StandardProcessingRecipe;
 
 import dev.latvian.mods.kubejs.registry.BuilderBase;
 import io.mcmaster.create_more_fans.KubeFanProcessingRecipe;
-import net.createmod.catnip.gui.element.GuiGameElement;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -46,7 +44,7 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
     private Lazy<RecipeType<KubeFanProcessingRecipe>> recipeType;
     private ResourceLocation recipeCatalystItem;
     private ResourceLocation jeiCategoryDisplayItem;
-    private Supplier<GuiGameElement.GuiRenderBuilder> jeiRenderAttachedBlockCallback;
+    private Supplier<Object> jeiRenderAttachedBlockCallback;
     private boolean jeiBlockShadow = true;
 
     public KubeFanProcessingTypeBuilder(ResourceLocation id) {
@@ -205,19 +203,20 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         return this;
     }
 
-    public Consumer<GuiGraphics> getJeiRenderAttachedBlockCallback() {
-        Supplier<GuiGameElement.GuiRenderBuilder> cb;
+    public Consumer<Object> getJeiRenderAttachedBlockCallback() {
+        Supplier<Object> cb;
         if (jeiRenderAttachedBlockCallback == null) {
-            cb = () -> GuiGameElement.of(Blocks.AIR.defaultBlockState());
+            cb = () -> net.createmod.catnip.gui.element.GuiGameElement.of(Blocks.AIR.defaultBlockState());
         } else {
             cb = jeiRenderAttachedBlockCallback;
         }
-        return (graphics) -> cb.get().scale(24).atLocal(0, 0, 2).lighting(AnimatedKinetics.DEFAULT_LIGHTING)
-                .render(graphics);
+        return (graphics) -> ((net.createmod.catnip.gui.element.GuiGameElement.GuiRenderBuilder) cb.get())
+                .scale(24).atLocal(0, 0, 2).lighting(AnimatedKinetics.DEFAULT_LIGHTING)
+                .render((net.minecraft.client.gui.GuiGraphics) graphics);
     }
 
     public KubeFanProcessingTypeBuilder setJeiRenderAttachedBlockCallback(
-            Supplier<GuiGameElement.GuiRenderBuilder> cb) {
+            Supplier<Object> cb) {
         jeiRenderAttachedBlockCallback = cb;
         return this;
     }
@@ -225,14 +224,14 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
     public KubeFanProcessingTypeBuilder setJeiAttachedBlock(ResourceLocation id) {
         return setJeiRenderAttachedBlockCallback(() -> {
             Block block = BuiltInRegistries.BLOCK.get(id);
-            return GuiGameElement.of(block.defaultBlockState());
+            return net.createmod.catnip.gui.element.GuiGameElement.of(block.defaultBlockState());
         });
     }
 
     public KubeFanProcessingTypeBuilder setJeiAttachedFluid(ResourceLocation id) {
         return setJeiRenderAttachedBlockCallback(() -> {
             Fluid fluid = BuiltInRegistries.FLUID.get(id);
-            return GuiGameElement.of(fluid);
+            return net.createmod.catnip.gui.element.GuiGameElement.of(fluid);
         });
     }
 

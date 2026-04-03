@@ -1,8 +1,5 @@
 package io.mcmaster.create_more_fans.kubejs;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -14,8 +11,6 @@ import com.simibubi.create.foundation.recipe.IRecipeTypeInfo;
 import com.simibubi.create.foundation.recipe.RecipeApplier;
 
 import dev.latvian.mods.kubejs.script.ScriptType;
-import io.mcmaster.create_more_fans.CreateMoreFans;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -23,7 +18,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.level.Level;
@@ -32,42 +26,6 @@ import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
 
 public class KubeFanProcessingType implements FanProcessingType {
-    private static final MethodHandle APPLY_RECIPE_ON;
-
-    static {
-        MethodHandles.Lookup lookup = MethodHandles.lookup();
-        MethodHandle handle;
-        try {
-            // Create 6.0.7+ (4-arg with boolean returnProcessingRemainder)
-            handle = lookup.findStatic(RecipeApplier.class, "applyRecipeOn",
-                    MethodType.methodType(List.class, Level.class, ItemStack.class, Recipe.class, boolean.class));
-        } catch (NoSuchMethodException | IllegalAccessException e) {
-            try {
-                // Create 6.0.6 (3-arg)
-                handle = lookup.findStatic(RecipeApplier.class, "applyRecipeOn",
-                        MethodType.methodType(List.class, Level.class, ItemStack.class, Recipe.class));
-            } catch (NoSuchMethodException | IllegalAccessException e2) {
-                throw new RuntimeException("Could not find RecipeApplier.applyRecipeOn", e2);
-            }
-        }
-        APPLY_RECIPE_ON = handle;
-        CreateMoreFans.LOGGER.debug("RecipeApplier.applyRecipeOn resolved with {} parameters",
-                handle.type().parameterCount());
-    }
-
-    @SuppressWarnings("unchecked")
-    private static List<ItemStack> invokeApplyRecipeOn(Level level, ItemStack stack, Recipe<?> recipe) {
-        try {
-            if (APPLY_RECIPE_ON.type().parameterCount() == 4) {
-                return (List<ItemStack>) APPLY_RECIPE_ON.invoke(level, stack, recipe, false);
-            } else {
-                return (List<ItemStack>) APPLY_RECIPE_ON.invoke(level, stack, recipe);
-            }
-        } catch (Throwable e) {
-            throw new RuntimeException("Failed to invoke RecipeApplier.applyRecipeOn", e);
-        }
-    }
-
     KubeFanProcessingTypeBuilder builder;
 
     public KubeFanProcessingType(KubeFanProcessingTypeBuilder builder) {
@@ -113,7 +71,7 @@ public class KubeFanProcessingType implements FanProcessingType {
         RecipeManager recipeManager = level.getRecipeManager();
         SingleRecipeInput input = new SingleRecipeInput(stack);
         return recipeManager.getRecipeFor(builder.getRecipeType(), input, level)
-                .map(recipe -> invokeApplyRecipeOn(level, stack, recipe.value())).orElse(null);
+                .map(recipe -> RecipeApplier.applyRecipeOn(level, stack, recipe)).orElse(null);
     }
 
     @Nullable
@@ -164,7 +122,7 @@ public class KubeFanProcessingType implements FanProcessingType {
         return builder.getJeiCategoryDisplayItem();
     }
 
-    public Consumer<GuiGraphics> getJeiRenderAttachedBlockCallback() {
+    public Consumer<Object> getJeiRenderAttachedBlockCallback() {
         return builder.getJeiRenderAttachedBlockCallback();
     }
 
