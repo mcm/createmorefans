@@ -24,3 +24,6 @@ runs
 run-data
 
 .vscode
+
+# test server
+test-server
