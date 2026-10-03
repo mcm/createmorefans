@@ -20,7 +20,7 @@ The built jar is `build/libs/<mod_id>-<minecraft_version>-<mod_version>.jar` (e.
 ## CI / Release
 
 - `.github/workflows/ci.yml` runs on pushes to `main`, PRs targeting `main`, weekly, and on manual dispatch (not on tags). The `CI ✅` job is the single gate for build, Semgrep, and secret scanning. Third-party actions are pinned to commit SHAs; keep them pinned when updating.
-- `.github/workflows/publish-curseforge.yml` runs on `v*` tags. The tag must match `mod_version` in `gradle.properties`, and the CurseForge changelog comes from the matching `## [x.y.z]` section of `CHANGELOG.md`. Uploads must list a `environment:Client`/`environment:Server` game version or CurseForge rejects them (errorCode 1021).
+- `.github/workflows/publish-curseforge.yml` runs on `v*` tags. The tag must match `mod_version` in `gradle.properties`, and the CurseForge changelog comes from the matching `## [x.y.z]` section of `CHANGELOG.md` (or a generic fallback linking to the GitHub release if that section is absent). Uploads must list an `environment:Client`/`environment:Server` game version or CurseForge rejects them (errorCode 1021).
 
 ## Architecture
 
