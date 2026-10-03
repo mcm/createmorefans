@@ -19,8 +19,10 @@ The built jar is `build/libs/<mod_id>-<minecraft_version>-<mod_version>.jar` (e.
 
 ## CI / Release
 
-- `.github/workflows/ci.yml` runs on pushes to `main`, PRs targeting `main`, weekly, and on manual dispatch (not on tags). The `CI ✅` job is the single gate for build, Semgrep, and secret scanning. Third-party actions are pinned to commit SHAs; keep them pinned when updating.
-- `.github/workflows/publish-curseforge.yml` runs on `v*` tags. The tag must match `mod_version` in `gradle.properties`, and the CurseForge changelog comes from the matching `## [x.y.z]` section of `CHANGELOG.md` (or a generic fallback linking to the GitHub release if that section is absent). Uploads must list an `environment:Client`/`environment:Server` game version or CurseForge rejects them (errorCode 1021).
+- **Branches per Minecraft version:** `main` targets the newest supported Minecraft version (currently 1.21.1). Older versions live on branches named after the version (e.g. `1.20.1`). When a new Minecraft version arrives, branch the current release off `main` as `<old version>` (e.g. `1.21.1`) and move `main` to the new version.
+- **Release tags** are `v<mod_version>-mc<minecraft_version>` (e.g. `v0.1.1-mc1.21.1`), created on the branch for that Minecraft version. The same `mod_version` can be released for several Minecraft versions under distinct tags.
+- `.github/workflows/ci.yml` runs on pushes to and PRs targeting `main` or a version branch (`[0-9]*.[0-9]*`), weekly (default branch only), and on manual dispatch (not on tags). The `CI ✅` job is the single gate for build, Semgrep, and secret scanning. Third-party actions are pinned to commit SHAs; keep them pinned when updating.
+- `.github/workflows/publish-curseforge.yml` runs on `v*` tags. The tag's mod version and Minecraft version must match `mod_version` and `minecraft_version` in `gradle.properties` at the tagged commit, and the CurseForge changelog comes from the matching `## [x.y.z]` section of `CHANGELOG.md` (or a generic fallback linking to the GitHub release if that section is absent). Uploads must list an `environment:Client`/`environment:Server` game version or CurseForge rejects them (errorCode 1021).
 
 ## Architecture
 
