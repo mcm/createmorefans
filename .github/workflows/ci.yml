@@ -17,7 +17,8 @@
 #   • Weekly, to catch upstream breakage (Maven repos, dependency changes)
 #   • Manually via workflow_dispatch
 #   Tag pushes do not run CI; they are handled by publish-curseforge.yml.
-#   Add [skip ci] to a commit message to skip a run.
+#   Don't use [skip ci] on PR commits: it skips this workflow entirely, so the
+#   required "CI ✅" check never reports and the PR cannot be merged.
 #
 # Note: third-party actions are pinned to full commit SHAs (with a version
 # comment) to satisfy Semgrep's supply-chain rules and prevent mutable-tag
@@ -153,7 +154,8 @@ jobs:
     name: Semgrep SAST
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      # Pinned by digest; bump the tag and digest together when updating.
+      image: semgrep/semgrep:1.179.0@sha256:93963d9295a366f59e4850127b1550400ee7b388f04fe144e4a1f6325d96e01b
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
