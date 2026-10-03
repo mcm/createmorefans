@@ -53,8 +53,8 @@ jobs:
           MOD_ID=$(prop mod_id)
           MOD_VERSION=$(prop mod_version)
           MINECRAFT_VERSION=$(prop minecraft_version)
-          NEO_VERSION=$(prop neo_version)
-          # CurseForge groups game versions by major.minor, e.g. "Minecraft 1.21"
+          FORGE_VERSION=$(prop forge_version)
+          # CurseForge groups game versions by major.minor, e.g. "Minecraft 1.20"
           MINECRAFT_VERSION_GROUP=$(echo "${MINECRAFT_VERSION}" | cut -d'.' -f1,2)
 
           {
@@ -62,13 +62,13 @@ jobs:
             echo "mod_version=${MOD_VERSION}"
             echo "minecraft_version=${MINECRAFT_VERSION}"
             echo "minecraft_version_group=${MINECRAFT_VERSION_GROUP}"
-            echo "neo_version=${NEO_VERSION}"
+            echo "forge_version=${FORGE_VERSION}"
             echo "jar_name=${MOD_ID}-${MINECRAFT_VERSION}-${MOD_VERSION}.jar"
           } >> "$GITHUB_OUTPUT"
 
           echo "Mod version from gradle.properties: ${MOD_VERSION}"
           echo "Minecraft version: ${MINECRAFT_VERSION} (group ${MINECRAFT_VERSION_GROUP})"
-          echo "NeoForge version: ${NEO_VERSION}"
+          echo "Forge version: ${FORGE_VERSION}"
 
       # Fail fast, before spending time on the build.
       - name: Verify version consistency
@@ -95,11 +95,11 @@ jobs:
           fi
           echo "✅ Version verification passed: ${TAG_VERSION} for Minecraft ${TAG_MINECRAFT_VERSION}"
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: '17'
 
       # Also validates the checksum of gradle/wrapper/gradle-wrapper.jar.
       - name: Setup Gradle
@@ -182,7 +182,7 @@ jobs:
           game_endpoint: minecraft
           file_path: build/libs/${{ steps.gradle_props.outputs.jar_name }}
           display_name: ${{ steps.gradle_props.outputs.jar_name }}
-          game_versions: "Minecraft ${{ steps.gradle_props.outputs.minecraft_version_group }}:${{ steps.gradle_props.outputs.minecraft_version }},NeoForge,Java 21,environment:Client,environment:Server"
+          game_versions: "Minecraft ${{ steps.gradle_props.outputs.minecraft_version_group }}:${{ steps.gradle_props.outputs.minecraft_version }},Forge,Java 17,environment:Client,environment:Server"
           release_type: release
           changelog_type: markdown
           changelog: ${{ steps.changelog.outputs.changelog }}

@@ -1,5 +1,5 @@
 # =============================================================================
-# CI Pipeline — Minecraft NeoForge mod (Gradle)
+# CI Pipeline — Minecraft Forge mod (Gradle)
 # =============================================================================
 # What this covers:
 #   • Gradle wrapper integrity (validated automatically by setup-gradle)
@@ -48,7 +48,7 @@ permissions:
   contents: read
 
 env:
-  JAVA_VERSION: "21"
+  JAVA_VERSION: "17"
 
 jobs:
   # ===========================================================================
@@ -96,17 +96,17 @@ jobs:
           fi
           echo "✅ Found $JAR"
 
-          TOML=$(unzip -p "$JAR" META-INF/neoforge.mods.toml)
+          TOML=$(unzip -p "$JAR" META-INF/mods.toml)
           if grep -q '\${' <<< "$TOML"; then
-            echo "::error::neoforge.mods.toml contains unexpanded properties"
+            echo "::error::mods.toml contains unexpanded properties"
             grep -n '\${' <<< "$TOML"
             exit 1
           fi
           if ! grep -q "^version *= *\"${MOD_VERSION}\"" <<< "$TOML"; then
-            echo "::error::neoforge.mods.toml version does not match mod_version (${MOD_VERSION})"
+            echo "::error::mods.toml version does not match mod_version (${MOD_VERSION})"
             exit 1
           fi
-          echo "✅ neoforge.mods.toml expanded with version ${MOD_VERSION}"
+          echo "✅ mods.toml expanded with version ${MOD_VERSION}"
 
           if ! unzip -l "$JAR" kubejs.plugins.txt > /dev/null; then
             echo "::error::kubejs.plugins.txt missing from jar; KubeJS will not load the plugin"

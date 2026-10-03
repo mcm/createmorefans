@@ -4,14 +4,15 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.simibubi.create.AllBlocks;
+import com.simibubi.create.api.registry.CreateRegistries;
 import com.simibubi.create.compat.jei.category.animations.AnimatedKinetics;
 import com.simibubi.create.content.kinetics.fan.processing.FanProcessingType;
 import com.simibubi.create.content.kinetics.fan.processing.FanProcessingType.AirFlowParticleAccess;
-import com.simibubi.create.content.processing.recipe.StandardProcessingRecipe;
+import com.simibubi.create.content.processing.recipe.ProcessingRecipeSerializer;
 
 import dev.latvian.mods.kubejs.registry.BuilderBase;
+import dev.latvian.mods.kubejs.registry.RegistryInfo;
 import io.mcmaster.create_more_fans.KubeFanProcessingRecipe;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -30,7 +31,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.common.util.Lazy;
+import net.minecraftforge.common.util.Lazy;
 
 public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType> {
     private TagKey<Block> catalystBlockTag = null;
@@ -40,7 +41,7 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
     private Consumer<MorphAirFlowCallback> morphAirFlowCallback;
     private Consumer<AffectEntityCallback> affectEntityCallback;
     private Lazy<KubeFanProcessingRecipeTypeInfo> typeInfo;
-    private Lazy<StandardProcessingRecipe.Serializer<KubeFanProcessingRecipe>> serializer;
+    private Lazy<ProcessingRecipeSerializer<KubeFanProcessingRecipe>> serializer;
     private Lazy<RecipeType<KubeFanProcessingRecipe>> recipeType;
     private ResourceLocation recipeCatalystItem;
     private ResourceLocation jeiCategoryDisplayItem;
@@ -50,7 +51,7 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
     public KubeFanProcessingTypeBuilder(ResourceLocation id) {
         super(id);
         typeInfo = Lazy.of(() -> new KubeFanProcessingRecipeTypeInfo(this));
-        serializer = Lazy.of(() -> new StandardProcessingRecipe.Serializer<>(
+        serializer = Lazy.of(() -> new ProcessingRecipeSerializer<>(
                 (params) -> new KubeFanProcessingRecipe(typeInfo.get(), params)));
         recipeType = Lazy.of(() -> RecipeType.simple(id));
     }
@@ -109,12 +110,17 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         }
     }
 
+    private static ResourceLocation parseTagId(String tag) {
+        // Accept both "namespace:path" and "#namespace:path"
+        return new ResourceLocation(tag.startsWith("#") ? tag.substring(1) : tag);
+    }
+
     public TagKey<Block> getCatalystBlockTag() {
         return catalystBlockTag;
     }
 
-    public KubeFanProcessingTypeBuilder setCatalystBlockTag(TagKey<Block> tag) {
-        catalystBlockTag = tag;
+    public KubeFanProcessingTypeBuilder setCatalystBlockTag(String tag) {
+        catalystBlockTag = TagKey.create(Registries.BLOCK, parseTagId(tag));
         return this;
     }
 
@@ -122,8 +128,8 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         return catalystFluidTag;
     }
 
-    public KubeFanProcessingTypeBuilder setCatalystFluidTag(TagKey<Fluid> tag) {
-        catalystFluidTag = tag;
+    public KubeFanProcessingTypeBuilder setCatalystFluidTag(String tag) {
+        catalystFluidTag = TagKey.create(Registries.FLUID, parseTagId(tag));
         return this;
     }
 
@@ -146,10 +152,10 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         return this;
     }
 
-    public KubeFanProcessingTypeBuilder setProcessingParticles(Supplier<ParticleOptions> particleData) {
+    public KubeFanProcessingTypeBuilder setProcessingParticles(ParticleOptions particleData) {
         spawnProcessingParticlesCallback = (cb) -> {
             if (cb.level.random.nextInt(8) == 0) {
-                cb.level.addParticle(particleData.get(), cb.pos.x + (cb.level.random.nextFloat() - .5f) * .5f,
+                cb.level.addParticle(particleData, cb.pos.x + (cb.level.random.nextFloat() - .5f) * .5f,
                         cb.pos.y + .5f, cb.pos.z + (cb.level.random.nextFloat() - .5f) * .5f, 0, 1 / 8f, 0);
             }
         };
@@ -179,9 +185,9 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
                 : BuiltInRegistries.ITEM.get(recipeCatalystItem).getDefaultInstance();
 
         if (displayName != null) {
-            stack.set(DataComponents.CUSTOM_NAME, displayName.copy().withStyle(style -> style.withItalic(false)));
+            stack.setHoverName(displayName.copy().withStyle(style -> style.withItalic(false)));
         } else {
-            stack.set(DataComponents.CUSTOM_NAME,
+            stack.setHoverName(
                     Component.translatable(id.getNamespace() + "." + "fan_" + id.getPath())
                             .withStyle(style -> style.withItalic(false)));
         }
@@ -245,6 +251,11 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
     }
 
     @Override
+    public RegistryInfo getRegistryType() {
+        return RegistryInfo.of(CreateRegistries.FAN_PROCESSING_TYPE, FanProcessingType.class);
+    }
+
+    @Override
     public KubeFanProcessingType createObject() {
         return new KubeFanProcessingType(this);
     }
@@ -259,7 +270,11 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         public RecipeTypeBuilder(KubeFanProcessingTypeBuilder builder) {
             super(builder.id);
             this.builder = builder;
-            this.registryKey = Registries.RECIPE_TYPE;
+        }
+
+        @Override
+        public RegistryInfo getRegistryType() {
+            return RegistryInfo.RECIPE_TYPE;
         }
 
         @Override
@@ -278,7 +293,11 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         public SerializerBuilder(KubeFanProcessingTypeBuilder builder) {
             super(builder.id);
             this.builder = builder;
-            this.registryKey = Registries.RECIPE_SERIALIZER;
+        }
+
+        @Override
+        public RegistryInfo getRegistryType() {
+            return RegistryInfo.RECIPE_SERIALIZER;
         }
 
         @Override
@@ -287,7 +306,7 @@ public class KubeFanProcessingTypeBuilder extends BuilderBase<FanProcessingType>
         }
     }
 
-    public StandardProcessingRecipe.Serializer<KubeFanProcessingRecipe> getSerializer() {
+    public ProcessingRecipeSerializer<KubeFanProcessingRecipe> getSerializer() {
         return serializer.get();
     }
 

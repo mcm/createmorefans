@@ -15,6 +15,7 @@ import com.simibubi.create.foundation.recipe.RecipeApplier;
 
 import dev.latvian.mods.kubejs.script.ScriptType;
 import io.mcmaster.create_more_fans.CreateMoreFans;
+import io.mcmaster.create_more_fans.KubeFanProcessingRecipe;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -24,7 +25,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeManager;
-import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.material.Fluid;
@@ -99,20 +100,23 @@ public class KubeFanProcessingType implements FanProcessingType {
         return builder.getTypeInfo();
     }
 
+    public RecipeType<KubeFanProcessingRecipe> getRecipeType() {
+        return builder.getRecipeType();
+    }
+
     @Override
     public boolean canProcess(ItemStack stack, Level level) {
         RecipeManager recipeManager = level.getRecipeManager();
-        SingleRecipeInput input = new SingleRecipeInput(stack);
-        boolean result = recipeManager.getRecipeFor(builder.getRecipeType(), input, level).isPresent();
+        boolean result = recipeManager
+                .getRecipeFor(builder.getRecipeType(), KubeFanProcessingRecipe.wrap(stack), level).isPresent();
         return result;
     }
 
     @Override
     public @Nullable List<ItemStack> process(ItemStack stack, Level level) {
         RecipeManager recipeManager = level.getRecipeManager();
-        SingleRecipeInput input = new SingleRecipeInput(stack);
-        return recipeManager.getRecipeFor(builder.getRecipeType(), input, level)
-                .map(recipe -> invokeApplyRecipeOn(level, stack, recipe.value())).orElse(null);
+        return recipeManager.getRecipeFor(builder.getRecipeType(), KubeFanProcessingRecipe.wrap(stack), level)
+                .map(recipe -> invokeApplyRecipeOn(level, stack, recipe)).orElse(null);
     }
 
     @Nullable

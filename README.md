@@ -9,6 +9,8 @@ This mod provides a KubeJS API to create custom fan processing types without nee
 
 ## Usage
 
+This branch targets **Minecraft 1.20.1 / Forge** (Create 6.0.6+, KubeJS 2001).
+
 A new `CreateMoreFansEvents` is available in startup scripts. 
 
 ```
@@ -26,5 +28,7 @@ CreateMoreFansEvents.registry((event) => {
     .setJeiAttachedBlock(`minecraft:oak_leaves`);
 });
 ```
+
+`setCatalystBlockTag` and `setCatalystFluidTag` accept a tag id with or without a leading `#`. `setProcessingParticles` accepts a particle type (as above) or a particle id string such as `"minecraft:cherry_leaves"`.
 
 **Note**: If a namespace isn't specified it will default to KubeJS, which may cause recipes not to display in EMI.

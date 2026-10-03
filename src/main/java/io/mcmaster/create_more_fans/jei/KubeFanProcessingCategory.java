@@ -2,6 +2,7 @@ package io.mcmaster.create_more_fans.jei;
 
 import javax.annotation.Nonnull;
 
+import com.simibubi.create.compat.jei.category.CreateRecipeCategory;
 import com.simibubi.create.compat.jei.category.ProcessingViaFanCategory;
 import com.simibubi.create.foundation.gui.AllGuiTextures;
 
@@ -17,7 +18,8 @@ public class KubeFanProcessingCategory extends ProcessingViaFanCategory.MultiOut
         this.processingType = processingType;
     }
 
-    public static Factory<KubeFanProcessingRecipe> factory(KubeFanProcessingType processingType) {
+    public static CreateRecipeCategory.Factory<KubeFanProcessingRecipe> factory(
+            KubeFanProcessingType processingType) {
         return (info) -> new KubeFanProcessingCategory(info, processingType);
     }
 
