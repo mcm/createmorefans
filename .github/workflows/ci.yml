@@ -13,8 +13,10 @@
 #   • Final gate job (single required status check for branch protection)
 #
 # When this runs:
-#   • Pushes to main and pull requests targeting main
-#   • Weekly, to catch upstream breakage (Maven repos, dependency changes)
+#   • Pushes to main and pull requests targeting main (main is the newest
+#     Minecraft version), plus the same for per-Minecraft-version release
+#     branches named after the version (e.g. 1.20.1)
+#   • Weekly (default branch only), to catch upstream breakage (Maven repos, dependency changes)
 #   • Manually via workflow_dispatch
 #   Tag pushes do not run CI; they are handled by publish-curseforge.yml.
 #   Don't use [skip ci] on PR commits: it skips this workflow entirely, so the
@@ -29,9 +31,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "[0-9]*.[0-9]*"]
   pull_request:
-    branches: [main]
+    branches: [main, "[0-9]*.[0-9]*"]
   schedule:
     # Weekly full run (Sundays at 03:00 UTC)
     - cron: "0 3 * * 0"
@@ -39,7 +41,7 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # Cancel superseded PR runs, but let every main build finish.
+  # Cancel superseded PR runs, but let every branch build finish.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -141,10 +143,11 @@ jobs:
       - name: Check CHANGELOG entry for mod_version
         run: |
           MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2- | tr -d '[:space:]')
+          MINECRAFT_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2- | tr -d '[:space:]')
           if grep -qF "## [${MOD_VERSION}]" CHANGELOG.md; then
             echo "✅ CHANGELOG.md has an entry for ${MOD_VERSION}"
           else
-            echo "::warning file=CHANGELOG.md::No CHANGELOG.md entry for mod_version ${MOD_VERSION}. Add a '## [${MOD_VERSION}]' section before tagging v${MOD_VERSION}, or the CurseForge release will use a fallback changelog."
+            echo "::warning file=CHANGELOG.md::No CHANGELOG.md entry for mod_version ${MOD_VERSION}. Add a '## [${MOD_VERSION}]' section before tagging v${MOD_VERSION}-mc${MINECRAFT_VERSION}, or the CurseForge release will use a fallback changelog."
           fi
 
   # ===========================================================================
