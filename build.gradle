@@ -98,6 +98,9 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     modImplementation "dev.latvian.mods:kubejs-forge:${kubejs_version}"
+    // KubeJS's own dependencies are not pulled in transitively, so declare them explicitly
+    modImplementation("dev.latvian.mods:rhino-forge:${rhino_version}") { transitive = false }
+    modImplementation "dev.architectury:architectury-forge:${architectury_version}"
 
     // Create mod dependency. The slim jar does not bundle Ponder, Flywheel or Registrate, so they are added separately.
     modImplementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
