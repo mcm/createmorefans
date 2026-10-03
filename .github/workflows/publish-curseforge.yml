@@ -5,69 +5,67 @@ on:
     tags:
       - 'v*'  # Trigger on version tags like v1.0.0, v0.3.1, etc.
 
+# Never run two publishes for the same tag at once, and never cancel one mid-upload.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build with Gradle
-        id: build
-        run: ./gradlew build --no-daemon
-
-      - name: Upload JAR as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: createmorefans-jar
-          path: build/libs/*.jar
-          retention-days: 30
-
       - name: Extract version from tag
         id: get_version
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
-          # Remove 'v' prefix from tag if present (e.g., v0.3.1 -> 0.3.1)
-          VERSION=${GITHUB_REF#refs/tags/v}
-          VERSION=${VERSION#refs/tags/}  # Remove any remaining refs/tags/ prefix
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          # Remove 'v' prefix from tag (e.g., v0.3.1 -> 0.3.1)
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "Version: ${VERSION}"
 
       - name: Read gradle.properties
         id: gradle_props
         run: |
-          # Extract mod_version from gradle.properties
-          MOD_VERSION=$(grep '^mod_version=' gradle.properties | cut -d'=' -f2)
-          MINECRAFT_VERSION=$(grep '^minecraft_version=' gradle.properties | cut -d'=' -f2)
-          NEO_VERSION=$(grep '^neo_version=' gradle.properties | cut -d'=' -f2)
-          
-          echo "mod_version=${MOD_VERSION}" >> $GITHUB_OUTPUT
-          echo "minecraft_version=${MINECRAFT_VERSION}" >> $GITHUB_OUTPUT
-          echo "neo_version=${NEO_VERSION}" >> $GITHUB_OUTPUT
-          
+          prop() { grep "^$1=" gradle.properties | cut -d'=' -f2- | tr -d '[:space:]'; }
+          MOD_ID=$(prop mod_id)
+          MOD_VERSION=$(prop mod_version)
+          MINECRAFT_VERSION=$(prop minecraft_version)
+          NEO_VERSION=$(prop neo_version)
+          # CurseForge groups game versions by major.minor, e.g. "Minecraft 1.21"
+          MINECRAFT_VERSION_GROUP=$(echo "${MINECRAFT_VERSION}" | cut -d'.' -f1,2)
+
+          {
+            echo "mod_id=${MOD_ID}"
+            echo "mod_version=${MOD_VERSION}"
+            echo "minecraft_version=${MINECRAFT_VERSION}"
+            echo "minecraft_version_group=${MINECRAFT_VERSION_GROUP}"
+            echo "neo_version=${NEO_VERSION}"
+            echo "jar_name=${MOD_ID}-${MINECRAFT_VERSION}-${MOD_VERSION}.jar"
+          } >> "$GITHUB_OUTPUT"
+
           echo "Mod version from gradle.properties: ${MOD_VERSION}"
-          echo "Minecraft version: ${MINECRAFT_VERSION}"
+          echo "Minecraft version: ${MINECRAFT_VERSION} (group ${MINECRAFT_VERSION_GROUP})"
           echo "NeoForge version: ${NEO_VERSION}"
 
+      # Fail fast, before spending time on the build.
       - name: Verify version consistency
+        env:
+          TAG_VERSION: ${{ steps.get_version.outputs.version }}
+          GRADLE_VERSION: ${{ steps.gradle_props.outputs.mod_version }}
         run: |
-          TAG_VERSION="${{ steps.get_version.outputs.version }}"
-          GRADLE_VERSION="${{ steps.gradle_props.outputs.mod_version }}"
-          
           echo "Tag version: ${TAG_VERSION}"
           echo "Gradle properties version: ${GRADLE_VERSION}"
-          
+
           if [ "${TAG_VERSION}" != "${GRADLE_VERSION}" ]; then
             echo "❌ ERROR: Version mismatch!"
             echo "Tag version (${TAG_VERSION}) does not match mod_version in gradle.properties (${GRADLE_VERSION})"
@@ -77,18 +75,50 @@ jobs:
             echo "✅ Version verification passed: ${TAG_VERSION}"
           fi
 
+      - name: Set up JDK 21
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Also validates the checksum of gradle/wrapper/gradle-wrapper.jar.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
+
+      - name: Verify jar exists
+        env:
+          JAR_NAME: ${{ steps.gradle_props.outputs.jar_name }}
+        run: |
+          if [ ! -f "build/libs/${JAR_NAME}" ]; then
+            echo "::error::Expected jar not found: build/libs/${JAR_NAME}"
+            ls -la build/libs/
+            exit 1
+          fi
+          echo "✅ Found build/libs/${JAR_NAME}"
+
+      - name: Upload JAR as artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ steps.gradle_props.outputs.mod_id }}-jar
+          path: build/libs/*.jar
+          retention-days: 30
+
       - name: Extract changelog for version
         id: changelog
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          
           # Extract changelog for the specific version from CHANGELOG.md
           # Look for version header like "## [0.3.1]" and extract content until next version header
           awk -v version="$VERSION" '
           BEGIN { found = 0; printing = 0 }
           /^## \[/ {
             if (found && printing) exit
-            if ($0 ~ "\\[" version "\\]") {
+            if (index($0, "[" version "]")) {
               found = 1
               printing = 1
               next
@@ -96,40 +126,43 @@ jobs:
           }
           found && printing { print }
           ' CHANGELOG.md > version_changelog.txt
-          
+
           # Check if we found a changelog for this version
           if [ ! -s version_changelog.txt ]; then
             echo "⚠️ Warning: No changelog found for version ${VERSION}"
             echo "Using fallback changelog"
             cat > version_changelog.txt << EOF
           ## Changes in ${VERSION}
-          
-          See the full changelog at: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+
+          See the full changelog at: ${RELEASE_URL}
           EOF
           else
             echo "✅ Found changelog for version ${VERSION}"
           fi
-          
+
           # Output the changelog content for debugging
           echo "Changelog content:"
           cat version_changelog.txt
-          
-          # Set the changelog as output (escape newlines for GitHub Actions)
+
+          # Set the changelog as output (multiline)
           {
             echo 'changelog<<EOF'
             cat version_changelog.txt
             echo EOF
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
+      # CurseForge rejects uploads without an environment version
+      # ("You must select at least one version from the environment group", errorCode 1021),
+      # so Client and Server are always listed.
       - name: Upload to CurseForge
-        uses: itsmeow/curseforge-upload@v3
+        uses: itsmeow/curseforge-upload@13f278adc4cc7b881555f87e6ea528387dd6492b # v3.1.0
         with:
           token: ${{ secrets.CF_API_TOKEN }}
           project_id: ${{ vars.CF_PROJECT_ID }}
           game_endpoint: minecraft
-          file_path: build/libs/createmorefans-${{ steps.get_version.outputs.version }}.jar
-          display_name: createmorefans-${{ steps.get_version.outputs.version }}.jar
-          game_versions: "Minecraft 1.21:${{ steps.gradle_props.outputs.minecraft_version }},NeoForge,Java 21"
+          file_path: build/libs/${{ steps.gradle_props.outputs.jar_name }}
+          display_name: ${{ steps.gradle_props.outputs.jar_name }}
+          game_versions: "Minecraft ${{ steps.gradle_props.outputs.minecraft_version_group }}:${{ steps.gradle_props.outputs.minecraft_version }},NeoForge,Java 21,environment:Client,environment:Server"
           release_type: release
           changelog_type: markdown
           changelog: ${{ steps.changelog.outputs.changelog }}

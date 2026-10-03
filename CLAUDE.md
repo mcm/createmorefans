@@ -15,6 +15,13 @@ Create: More Fans is a Minecraft NeoForge mod (1.21.1) that provides a KubeJS AP
 
 Requires Java 21. Uses NeoForge Gradle (userdev plugin).
 
+The built jar is `build/libs/<mod_id>-<minecraft_version>-<mod_version>.jar` (e.g. `createmorefans-1.21.1-0.1.1.jar`).
+
+## CI / Release
+
+- `.github/workflows/ci.yml` runs on pushes to `main`, PRs targeting `main`, weekly, and on manual dispatch (not on tags). The `CI ✅` job is the single gate for build, Semgrep, and secret scanning. Third-party actions are pinned to commit SHAs; keep them pinned when updating.
+- `.github/workflows/publish-curseforge.yml` runs on `v*` tags. The tag must match `mod_version` in `gradle.properties`, and the CurseForge changelog comes from the matching `## [x.y.z]` section of `CHANGELOG.md`. Uploads must list a `environment:Client`/`environment:Server` game version or CurseForge rejects them (errorCode 1021).
+
 ## Architecture
 
 The mod has three layers:
