@@ -53,7 +53,9 @@ repositories {
 }
 
 base {
-    archivesName = mod_id
+    // Include the Minecraft version in the jar name (e.g. createmorefans-1.21.1-0.1.1.jar)
+    // so builds for different Minecraft versions can be told apart.
+    archivesName = "${mod_id}-${minecraft_version}"
 }
 
 // Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
